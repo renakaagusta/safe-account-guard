@@ -6,7 +6,7 @@ import "safe-contracts/contracts/Safe.sol";
 import "../src/IFaucet.sol";
 import "../src/IERC20.sol";
 
-contract FaucetDeposit is Script {
+contract FaucetRequestToken is Script {
     // Replace these with your deployed addresses
     address SAFE_ADDRESS = vm.envAddress("SAFE_ADDRESS"); // Your deployed Safe address
     address FAUCET_ADDRESS = vm.envAddress("FAUCET_ADDRESS"); // Your deployed Faucet address
@@ -56,20 +56,17 @@ contract FaucetDeposit is Script {
         // Before approve transaction
         console.log("Current allowance:", token.allowance(SAFE_ADDRESS, FAUCET_ADDRESS));
         
-        // Example: Deposit tokens
-        uint256 depositAmount = 1 * 10**18;
-        
-        bytes memory depositData = abi.encodeWithSelector(
-            IFaucet.depositToken.selector,
-            TOKEN_ADDRESS,
-            depositAmount
+        bytes memory requestData = abi.encodeWithSelector(
+            IFaucet.requestToken.selector,
+            SAFE_ADDRESS,
+            TOKEN_ADDRESS
         );
 
         executeTransactionWithMultiSig(
             safe,
             FAUCET_ADDRESS,
             0,
-            depositData,
+            requestData,
             ownerPrivateKeys,
             threshold
         );

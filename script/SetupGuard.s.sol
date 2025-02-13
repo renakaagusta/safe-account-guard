@@ -5,10 +5,12 @@ import "forge-std/Script.sol";
 import "safe-contracts/contracts/Safe.sol";
 import "../src/SafeGuard.sol";
 import "safe-contracts/contracts/base/GuardManager.sol";
+import "../src/IFaucet.sol";
+import "../src/IERC20.sol";
+
 contract SetupGuard is Script {
     address SAFE_ADDRESS = vm.envAddress("SAFE_ADDRESS");
     address FAUCET_ADDRESS = vm.envAddress("FAUCET_ADDRESS");
-    address USDT_ADDRESS = vm.envAddress("USDT_ADDRESS");
     address IDRT_ADDRESS = vm.envAddress("IDRT_ADDRESS");
 
     // Array of owner private keys (from .env file)
@@ -29,24 +31,24 @@ contract SetupGuard is Script {
         Safe safe = Safe(payable(SAFE_ADDRESS));
         
         // Deploy the guard
-        SafeGuard guard = new SafeGuard();
+        SafeGuard guard = new SafeGuard(address(this));
 
         console.log("Guard deployed at:", address(guard));
         
-        // Allow the safe contract
-        guard.allowContract(address(safe));
+        // Allow the safe contract to execute the execTransaction function
+        guard.allowFunction(address(safe), ISafe.execTransaction.selector);
 
-        // Allow the guard contract
-        guard.allowContract(address(guard));
+        // Allow the safe contract to execute the execTransaction function
+        guard.allowFunction(address(safe), GuardManager.setGuard.selector);
 
         // Allow the faucet contract
-        guard.allowContract(FAUCET_ADDRESS);
-
-        // Allow the USDT contract
-        guard.allowContract(USDT_ADDRESS);
+        guard.allowFunction(FAUCET_ADDRESS, IFaucet.depositToken.selector);
 
         // Allow the IDRT contract
-        guard.allowContract(IDRT_ADDRESS);
+        guard.allowFunction(IDRT_ADDRESS, IERC20.transfer.selector);
+
+        // Allow the IDRT contract
+        guard.allowFunction(IDRT_ADDRESS, IERC20.approve.selector);
 
         // Check threshold
         uint256 threshold = safe.getThreshold();

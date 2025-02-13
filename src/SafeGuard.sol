@@ -10,30 +10,32 @@ import {IERC165} from "safe-contracts/contracts/interfaces/IERC165.sol";
 
 contract SafeGuard is BaseGuard {
     address public owner;
-    mapping(address => bool) public allowedContracts;
+    address public serviceManager;
+    mapping(address => mapping(bytes4 => bool)) public allowedFunctions;
     
-    event ContractAllowed(address indexed target);
-    event ContractRemoved(address indexed target);
+    event FunctionAllowed(address indexed target, bytes4 indexed functionSelector);
+    event FunctionRemoved(address indexed target, bytes4 indexed functionSelector);
     
-    constructor() {
+    constructor(address _serviceManager) {
         owner = msg.sender;
+        serviceManager = _serviceManager;
     }
     
-    modifier onlyOwner() {
+    modifier onlyServiceManager() {
         require(msg.sender == owner, "Not authorized");
         _;
     }
     
     // Add contract to allowlist
-    function allowContract(address target) external onlyOwner {
-        allowedContracts[target] = true;
-        emit ContractAllowed(target);
+    function allowFunction(address target, bytes4 functionSelector) external onlyServiceManager {
+        allowedFunctions[target][functionSelector] = true;
+        emit FunctionAllowed(target, functionSelector);
     }
     
     // Remove contract from allowlist
-    function removeContract(address target) external onlyOwner {
-        allowedContracts[target] = false;
-        emit ContractRemoved(target);
+    function removeFunction(address target, bytes4 functionSelector) external onlyServiceManager {
+        allowedFunctions[target][functionSelector] = false;
+        emit FunctionRemoved(target, functionSelector);
     }
     
     // Check if transaction is going to an allowed contract
@@ -50,7 +52,17 @@ contract SafeGuard is BaseGuard {
         bytes memory signatures,
         address msgSender
     ) external view override {
-        require(allowedContracts[to], "Contract not allowed");
+        // Get function selector from data
+        bytes4 functionSelector;
+        if (data.length >= 4) {
+            assembly {
+                // Load first 32 bytes of the data
+                let selector := mload(add(data, 32))
+                // Take first 4 bytes
+                functionSelector := and(selector, 0xFFFFFFFF00000000000000000000000000000000000000000000000000000000)
+            }
+        }
+        require(allowedFunctions[to][functionSelector], "Function not allowed");
     }
     
     // No special checks after execution
@@ -75,6 +87,5 @@ contract SafeGuard is BaseGuard {
     }
 
     function checkAfterModuleExecution(bytes32 txHash, bool success) external override {
-        // Add your implementation here
     }
 }
