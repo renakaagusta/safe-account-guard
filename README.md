@@ -31,9 +31,9 @@ forge script script/DeploySafeScript.s.sol --rpc-url $RPC_URL --private-key $PRI
 
 2. Transfer IDRT to Safe contract
 
-cast send --private-key $PRIVATE_KEY $IDRT_ADDRESS "transfer(address,uint256)(bool)" $SAFE_ADDRESS 1000000000000000000000  
+cast send --private-key $PRIVATE_KEY $IDRT_ADDRESS --rpc-url $RPC_URL "transfer(address,uint256)(bool)" $SAFE_ADDRESS 1000000000000000000000  
 
-cast call --private-key $PRIVATE_KEY $IDRT_ADDRESS "balanceOf(address)(uint256)" $SAFE_ADDRESS
+cast call --private-key $PRIVATE_KEY $IDRT_ADDRESS --rpc-url $RPC_URL "balanceOf(address)(uint256)" $SAFE_ADDRESS
 
 3. Setup Guard
 
@@ -41,12 +41,20 @@ forge script script/SetupGuard.s.sol --rpc-url $RPC_URL --private-key $PRIVATE_K
 
 4. Approve Faucet contract
 
-forge script script/FaucetApprove.s.sol --rpc-url $RPC_URL --private-key $PRIVATE_KEY --broadcast
+forge script script/FaucetApprove.s.sol --rpc-url $RPC_URL --private-key $PRIVATE_KEY $PRIVATE_KEY --broadcast
 
 5. Deposit to Faucet contract
 
-forge script script/FaucetDeposit.s.sol --rpc-url $RPC_URL --private-key $PRIVATE_KEY --broadcast
+forge script script/FaucetDeposit.s.sol --rpc-url $RPC_URL --private-key $PRIVATE_KEY $PRIVATE_KEY --broadcast
 
 6. Request Token from Faucet contract (this transaction will be rejected since it doesn't allowed by the guard)
 
-forge script script/FaucetRequestToken.s.sol --rpc-url $RPC_URL --private-key $PRIVATE_KEY --broadcast
+forge script script/FaucetRequestToken.s.sol --rpc-url $RPC_URL --private-key --rpc-url $RPC_URL $PRIVATE_KEY --broadcast
+
+7. Deploy Safe Guard
+
+forge script script/DeploySafeGuard.s.sol --rpc-url $RPC_URL --private-key $PRIVATE_KEY --broadcast -vvvv
+
+8. Update Service Manager Address
+
+forge script script/UpdateServiceManager.s.sol --rpc-url $RPC_URL --private-key $PRIVATE_KEY --broadcast

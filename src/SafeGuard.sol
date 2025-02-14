@@ -8,34 +8,91 @@ import {ITransactionGuard} from "safe-contracts/contracts/base/GuardManager.sol"
 import {IModuleGuard} from "safe-contracts/contracts/base/ModuleManager.sol";
 import {IERC165} from "safe-contracts/contracts/interfaces/IERC165.sol";
 
+interface IHelloWorldServiceManager {
+    event NewTaskCreated(uint32 indexed taskIndex, Task task);
+
+    event TaskResponded(uint32 indexed taskIndex, Task task, address operator);
+    event Transaction(uint32 indexed taskIndex, address indexed from, address indexed to, uint256 value, bytes data, bytes message, bool status);
+    struct Task {
+        uint32 taskCreatedBlock;
+        address from;
+        address to;
+        bytes data;
+        uint256 value;
+    }
+
+    function latestTaskNum() external view returns (uint32);
+
+    function allTaskHashes(
+        uint32 taskIndex
+    ) external view returns (bytes32);
+
+    function allTaskResponses(
+        address operator,
+        uint32 taskIndex
+    ) external view returns (bytes memory);
+
+    function createNewTask(
+        address from,
+        address to,
+        bytes memory data,
+        uint256 value
+    ) external returns (Task memory);
+
+    function respondToTask(
+        Task calldata task,
+        uint32 referenceTaskIndex,
+        bytes memory signature,
+        bool isSafe,
+        bytes memory causeHash
+    ) external;
+}
+
 contract SafeGuard is BaseGuard {
-    address public owner;
+
     address public serviceManager;
+
     mapping(address => mapping(bytes4 => bool)) public allowedFunctions;
-    
+    mapping(address => mapping(bytes4 => bool)) public rejectedFunctions;
+    mapping(address => mapping(bytes4 => bool)) public proposedFunctions;
+
     event FunctionAllowed(address indexed target, bytes4 indexed functionSelector);
-    event FunctionRemoved(address indexed target, bytes4 indexed functionSelector);
-    
-    constructor(address _serviceManager) {
-        owner = msg.sender;
+    event FunctionRejected(address indexed target, bytes4 indexed functionSelector);
+    event FunctionProposed(address indexed target, bytes4 indexed functionSelector);
+
+    // Used for development purposes
+    function updateServiceManager(address _serviceManager) external {
         serviceManager = _serviceManager;
     }
     
     modifier onlyServiceManager() {
-        require(msg.sender == owner, "Not authorized");
+        require(msg.sender == serviceManager, "Not authorized");
         _;
     }
     
     // Add contract to allowlist
     function allowFunction(address target, bytes4 functionSelector) external onlyServiceManager {
+        proposedFunctions[target][functionSelector] = false;
         allowedFunctions[target][functionSelector] = true;
         emit FunctionAllowed(target, functionSelector);
     }
-    
+
     // Remove contract from allowlist
-    function removeFunction(address target, bytes4 functionSelector) external onlyServiceManager {
-        allowedFunctions[target][functionSelector] = false;
-        emit FunctionRemoved(target, functionSelector);
+    function rejectFunction(address target, bytes4 functionSelector) external onlyServiceManager {
+        proposedFunctions[target][functionSelector] = false;
+        rejectedFunctions[target][functionSelector] = true;
+        emit FunctionRejected(target, functionSelector);
+    }
+
+    function proposeFunction(address target, bytes4 functionSelector) external onlyServiceManager {
+        proposedFunctions[target][functionSelector] = true;
+        emit FunctionProposed(target, functionSelector);
+        IHelloWorldServiceManager(serviceManager).createNewTask(
+            msg.sender, 
+            target, 
+            abi.encode(target, functionSelector),
+            0
+        );
     }
     
     // Check if transaction is going to an allowed contract
@@ -51,7 +108,7 @@ contract SafeGuard is BaseGuard {
         address payable refundReceiver,
         bytes memory signatures,
         address msgSender
-    ) external view override {
+    ) external override {
         // Get function selector from data
         bytes4 functionSelector;
         if (data.length >= 4) {
@@ -62,7 +119,19 @@ contract SafeGuard is BaseGuard {
                 functionSelector := and(selector, 0xFFFFFFFF00000000000000000000000000000000000000000000000000000000)
             }
         }
-        require(allowedFunctions[to][functionSelector], "Function not allowed");
+        
+        require(rejectedFunctions[to][functionSelector] == false, "Function not allowed");
+    
+        // if (proposedFunctions[to][functionSelector] == false && allowedFunctions[to][functionSelector] == false) {
+            proposedFunctions[to][functionSelector] = true;
+            emit FunctionProposed(to, functionSelector);
+            IHelloWorldServiceManager(serviceManager).createNewTask(
+                msg.sender, 
+                to, 
+                abi.encode(to, functionSelector, data),
+                0
+            );
+        // }
     }
     
     // No special checks after execution

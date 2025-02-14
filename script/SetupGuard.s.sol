@@ -11,6 +11,7 @@ import "../src/IERC20.sol";
 contract SetupGuard is Script {
     address SAFE_ADDRESS = vm.envAddress("SAFE_ADDRESS");
     address FAUCET_ADDRESS = vm.envAddress("FAUCET_ADDRESS");
+    address USDT_ADDRESS = vm.envAddress("USDT_ADDRESS");
     address IDRT_ADDRESS = vm.envAddress("IDRT_ADDRESS");
 
     // Array of owner private keys (from .env file)
@@ -31,15 +32,18 @@ contract SetupGuard is Script {
         Safe safe = Safe(payable(SAFE_ADDRESS));
         
         // Deploy the guard
-        SafeGuard guard = new SafeGuard(address(this));
-
-        console.log("Guard deployed at:", address(guard));
+        SafeGuard guard = SafeGuard(vm.envAddress("SAFE_GUARD_ADDRESS"));
         
+        guard.updateServiceManager(vm.envAddress("ADDRESS_1"));
+
         // Allow the safe contract to execute the execTransaction function
         guard.allowFunction(address(safe), ISafe.execTransaction.selector);
 
-        // Allow the safe contract to execute the execTransaction function
+        // Allow the safe contract
         guard.allowFunction(address(safe), GuardManager.setGuard.selector);
+
+        // Allow the guard contract
+        guard.allowFunction(address(guard), SafeGuard.allowFunction.selector);
 
         // Allow the faucet contract
         guard.allowFunction(FAUCET_ADDRESS, IFaucet.depositToken.selector);
@@ -56,6 +60,8 @@ contract SetupGuard is Script {
         
         // Create setGuard transaction data
         bytes memory guardData = abi.encodeCall(GuardManager.setGuard, (address(guard)));
+
+        guard.updateServiceManager(vm.envAddress("SERVICE_MANAGER_ADDRESS"));
 
         // Execute the setGuard transaction through multi-sig
         executeTransactionWithMultiSig(
