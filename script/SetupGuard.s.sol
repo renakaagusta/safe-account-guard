@@ -16,9 +16,9 @@ contract SetupGuard is Script {
 
     // Array of owner private keys (from .env file)
     function getOwnerPrivateKeys() internal view returns (uint256[] memory) {
-        uint256[] memory privateKeys = new uint256[](2);
+        uint256[] memory privateKeys = new uint256[](1);
         
-        for(uint i = 1; i <= 2; i++) {
+        for(uint i = 1; i <= 1; i++) {
             privateKeys[i-1] = vm.envUint(string.concat("PRIVATE_KEY_", vm.toString(i)));
         }
         
@@ -30,6 +30,17 @@ contract SetupGuard is Script {
 
         uint256[] memory ownerPrivateKeys = getOwnerPrivateKeys();
         Safe safe = Safe(payable(SAFE_ADDRESS));
+
+        // Log deployer address
+        uint256 deployerKey = vm.envUint("PRIVATE_KEY_1");
+        address deployer = vm.addr(deployerKey);
+        console.log("Deployer address:", deployer);
+
+        address[] memory owners = safe.getOwners();
+        console.log("Safe owners:");
+        for(uint i = 0; i < owners.length; i++) {
+            console.log("Owner", i, ":", owners[i]);
+        }
         
         // Deploy the guard
         SafeGuard guard = SafeGuard(vm.envAddress("SAFE_GUARD_ADDRESS"));

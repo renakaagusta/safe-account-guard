@@ -37,7 +37,7 @@ cast call --private-key $PRIVATE_KEY $IDRT_ADDRESS --rpc-url $RPC_URL "balanceOf
 
 3. Setup Guard
 
-forge script script/SetupGuard.s.sol --rpc-url $RPC_URL --private-key $PRIVATE_KEY --broadcast
+forge script script/SetupGuard.s.sol --rpc-url $RPC_URL --private-key $PRIVATE_KEY --broadcast --gas-limit 50000000 --gas-price 150000000000  
 
 4. Approve Faucet contract
 
@@ -54,7 +54,3 @@ forge script script/FaucetRequestToken.s.sol --rpc-url $RPC_URL --private-key --
 7. Deploy Safe Guard
 
 forge script script/DeploySafeGuard.s.sol --rpc-url $RPC_URL --private-key $PRIVATE_KEY --broadcast -vvvv
-
-8. Update Service Manager Address
-
-forge script script/UpdateServiceManager.s.sol --rpc-url $RPC_URL --private-key $PRIVATE_KEY --broadcast
