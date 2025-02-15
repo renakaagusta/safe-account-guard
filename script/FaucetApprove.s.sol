@@ -52,9 +52,9 @@ contract FaucetApprove is Script {
 
         // Array of owner private keys (from .env file)
     function getOwnerPrivateKeys() internal view returns (uint256[] memory) {
-        uint256[] memory privateKeys = new uint256[](2);
+        uint256[] memory privateKeys = new uint256[](1);
         
-        for(uint i = 1; i <= 2; i++) {
+        for(uint i = 1; i <= 1; i++) {
             privateKeys[i-1] = vm.envUint(string.concat("PRIVATE_KEY_", vm.toString(i)));
         }
         
